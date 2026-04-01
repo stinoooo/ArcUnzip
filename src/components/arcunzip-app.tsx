@@ -68,18 +68,6 @@ export function ArcUnzipApp() {
     [entries]
   );
 
-  const contentMatchPaths = useMemo(() => {
-    if (!normalizedQuery) return new Set<string>();
-
-    const matches = new Set<string>();
-    for (const [path, content] of Object.entries(contentIndex)) {
-      if (content.toLowerCase().includes(normalizedQuery)) {
-        matches.add(path);
-      }
-    }
-    return matches;
-  }, [contentIndex, normalizedQuery]);
-
   const fileNameMatchPaths = useMemo(() => {
     if (!normalizedQuery) return new Set<string>();
 
@@ -92,15 +80,40 @@ export function ArcUnzipApp() {
     return matches;
   }, [entries, normalizedQuery]);
 
+  const contentStats = useMemo(() => {
+    if (!normalizedQuery) {
+      return {
+        matchedFiles: new Set<string>(),
+        occurrencesByFile: {} as Record<string, number>,
+        totalOccurrences: 0,
+      };
+    }
+
+    const matchedFiles = new Set<string>();
+    const occurrencesByFile: Record<string, number> = {};
+    let totalOccurrences = 0;
+
+    for (const [path, content] of Object.entries(contentIndex)) {
+      const count = countOccurrences(content.toLowerCase(), normalizedQuery);
+      if (count > 0) {
+        matchedFiles.add(path);
+        occurrencesByFile[path] = count;
+        totalOccurrences += count;
+      }
+    }
+
+    return { matchedFiles, occurrencesByFile, totalOccurrences };
+  }, [contentIndex, normalizedQuery]);
+
   const filteredEntries = useMemo(() => {
     if (!normalizedQuery) return entries;
 
     return entries.filter((entry) => {
       if (entry.path.toLowerCase().includes(normalizedQuery)) return true;
-      if (!entry.isDir && contentMatchPaths.has(entry.path)) return true;
+      if (!entry.isDir && contentStats.matchedFiles.has(entry.path)) return true;
       return false;
     });
-  }, [entries, normalizedQuery, contentMatchPaths]);
+  }, [entries, normalizedQuery, contentStats]);
 
   const tree = useMemo(() => buildTree(filteredEntries), [filteredEntries]);
 
@@ -112,15 +125,15 @@ export function ArcUnzipApp() {
   const contentResults = useMemo(() => {
     if (!normalizedQuery) return [];
 
-    const results = filteredEntries
-      .filter((entry) => !entry.isDir && contentMatchPaths.has(entry.path))
+    return filteredEntries
+      .filter((entry) => !entry.isDir && contentStats.matchedFiles.has(entry.path))
       .map((entry) => ({
         entry,
         snippet: makeSnippet(contentIndex[entry.path] || "", normalizedQuery),
-      }));
-
-    return results.slice(0, 50);
-  }, [filteredEntries, contentIndex, contentMatchPaths, normalizedQuery]);
+        count: contentStats.occurrencesByFile[entry.path] || 0,
+      }))
+      .slice(0, 50);
+  }, [filteredEntries, contentIndex, contentStats, normalizedQuery]);
 
   async function handleZipUpload(file: File) {
     resetViewer();
@@ -375,8 +388,7 @@ export function ArcUnzipApp() {
                 </div>
 
                 <p className="mt-1 text-sm text-[#8d9ab5]">
-                  Browse ZIP archives beautifully. No, not your pants, you filthy
-                  animal.
+                  Browse ZIP archives beautifully. No, not your pants, you filthy animal.
                 </p>
               </div>
             </div>
@@ -422,6 +434,23 @@ export function ArcUnzipApp() {
           />
         </section>
 
+        {normalizedQuery ? (
+          <section className="grid gap-3 md:grid-cols-3">
+            <StatCard
+              label="Matching Files"
+              value={String(contentStats.matchedFiles.size)}
+            />
+            <StatCard
+              label="Total Content Matches"
+              value={String(contentStats.totalOccurrences)}
+            />
+            <StatCard
+              label="Name Matches"
+              value={String(fileNameMatchPaths.size)}
+            />
+          </section>
+        ) : null}
+
         <section className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
           <aside className="arc-panel-strong flex min-h-[320px] flex-col overflow-hidden rounded-[28px]">
             <div className="flex items-center justify-between border-b border-white/8 px-5 py-4">
@@ -436,10 +465,7 @@ export function ArcUnzipApp() {
                 <Button className="h-9 rounded-xl px-3 text-xs" onClick={expandAll}>
                   Expand all
                 </Button>
-                <Button
-                  className="h-9 rounded-xl px-3 text-xs"
-                  onClick={collapseAll}
-                >
+                <Button className="h-9 rounded-xl px-3 text-xs" onClick={collapseAll}>
                   Collapse all
                 </Button>
               </div>
@@ -452,15 +478,20 @@ export function ArcUnzipApp() {
                 </div>
 
                 <div className="max-h-[220px] space-y-2 overflow-auto pr-1 scrollbar-thin-dark">
-                  {contentResults.map(({ entry, snippet }) => (
+                  {contentResults.map(({ entry, snippet, count }) => (
                     <button
                       key={`search-result-${entry.path}`}
                       type="button"
                       onClick={() => void openFile(entry)}
                       className="w-full rounded-2xl border border-white/8 bg-white/[0.03] p-3 text-left transition hover:border-[#6ae4ff]/20 hover:bg-[#6ae4ff]/8"
                     >
-                      <div className="truncate text-sm font-medium text-white">
-                        {entry.path}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="truncate text-sm font-medium text-white">
+                          {entry.path}
+                        </div>
+                        <div className="shrink-0 rounded-full border border-[#6ae4ff]/20 bg-[#6ae4ff]/10 px-2 py-0.5 text-[11px] text-[#6ae4ff]">
+                          {count} match{count === 1 ? "" : "es"}
+                        </div>
                       </div>
                       <div className="mt-1 line-clamp-3 text-xs leading-6 text-[#8d9ab5]">
                         {snippet}
@@ -533,6 +564,7 @@ export function ArcUnzipApp() {
                   blobUrl={blobUrl}
                   activeTab={activeTab}
                   setActiveTab={setActiveTab}
+                  globalSearchQuery={normalizedQuery}
                 />
               ) : (
                 <EmptyState
@@ -552,7 +584,7 @@ export function ArcUnzipApp() {
             </span>
             <span className="inline-flex items-center gap-2">
               <Sparkles size={14} className="text-[#6ae4ff]" />
-              ArcUnzip by ArcNode
+              ArcUnzip is part of the arcnode.dev network
               {skippedFiles > 0
                 ? ` • ${skippedFiles} oversized/unreadable text file${skippedFiles === 1 ? "" : "s"} skipped`
                 : ""}
@@ -579,4 +611,19 @@ function makeSnippet(content: string, query: string) {
   const snippet = content.slice(start, end).replace(/\s+/g, " ").trim();
 
   return `${start > 0 ? "…" : ""}${snippet}${end < content.length ? "…" : ""}`;
+}
+
+function countOccurrences(content: string, query: string) {
+  if (!query) return 0;
+  let count = 0;
+  let index = 0;
+
+  while (true) {
+    const found = content.indexOf(query, index);
+    if (found === -1) break;
+    count++;
+    index = found + query.length;
+  }
+
+  return count;
 }
