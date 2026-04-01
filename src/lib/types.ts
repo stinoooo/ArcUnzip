@@ -1,9 +1,11 @@
+import type * as zip from "@zip.js/zip.js";
+
 export type ZipEntryItem = {
   path: string;
   name: string;
   isDir: boolean;
   ext: string;
-  raw: unknown;
+  raw: zip.Entry;
   uncompressedSize: number;
   compressedSize: number;
 };
