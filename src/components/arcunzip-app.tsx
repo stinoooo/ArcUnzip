@@ -577,18 +577,43 @@ export function ArcUnzipApp() {
         </section>
 
         <footer className="arc-panel rounded-[22px] px-5 py-3 text-sm text-[#8d9ab5]">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <span>
               {status}
               {isIndexing ? " Search is still building in the background." : ""}
             </span>
-            <span className="inline-flex items-center gap-2">
-              <Sparkles size={14} className="text-[#6ae4ff]" />
-              ArcUnzip is part of the arcnode.dev network
-              {skippedFiles > 0
-                ? ` • ${skippedFiles} oversized/unreadable text file${skippedFiles === 1 ? "" : "s"} skipped`
-                : ""}
-            </span>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-2">
+                <Sparkles size={14} className="text-[#6ae4ff]" />
+                <a
+                  href="https://arcnode.dev"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="transition hover:text-white"
+                >
+                  ArcUnzip is part of the arcnode.dev network
+                </a>
+              </span>
+
+              <span className="text-white/20">•</span>
+
+              <a
+                href="/privacy"
+                className="text-[#6ae4ff] transition hover:text-white"
+              >
+                Privacy Policy
+              </a>
+
+              {skippedFiles > 0 ? (
+                <>
+                  <span className="text-white/20">•</span>
+                  <span>
+                    {skippedFiles} oversized/unreadable text file{skippedFiles === 1 ? "" : "s"} skipped
+                  </span>
+                </>
+              ) : null}
+            </div>
           </div>
         </footer>
       </div>
