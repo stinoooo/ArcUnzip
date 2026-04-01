@@ -114,7 +114,7 @@ export function ArcUnzipApp() {
     setStatus(`Opening "${entry.path}"...`);
 
     try {
-      const rawEntry = entry.raw as zip.Entry;
+      const rawEntry = entry.raw as zip.FileEntry;
 
       if (kind === "image" || kind === "video" || kind === "audio" || kind === "pdf") {
         const blob = await rawEntry.getData(new zip.BlobWriter(getMimeType(entry.ext)));
