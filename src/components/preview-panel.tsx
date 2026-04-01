@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
-import { CalendarClock, Hash, MessageSquareText, Paperclip } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CalendarClock, Hash, MessageSquareText, Search } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PreviewTab } from "@/lib/types";
 import { extractMessagesFromJson, getJsonType } from "@/lib/json-utils";
-import { syntaxHighlightJson, escapeHtml } from "@/lib/utils";
+import { escapeHtml, syntaxHighlightJson } from "@/lib/utils";
 
 type Props = {
   entryName: string;
@@ -15,6 +15,7 @@ type Props = {
   blobUrl: string | null;
   activeTab: string | null;
   setActiveTab: (tab: string) => void;
+  globalSearchQuery?: string;
 };
 
 export function PreviewPanel({
@@ -25,7 +26,23 @@ export function PreviewPanel({
   blobUrl,
   activeTab,
   setActiveTab,
+  globalSearchQuery = "",
 }: Props) {
+  const [localSearch, setLocalSearch] = useState("");
+  const localSearchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        localSearchInputRef.current?.focus();
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   const tabs = useMemo<PreviewTab[]>(() => {
     if (fileKind === "json" && jsonContent !== null) {
       const messages = extractMessagesFromJson(jsonContent);
@@ -53,6 +70,7 @@ export function PreviewPanel({
 
   const resolvedTab = tabs.find((tab) => tab.key === activeTab)?.key ?? tabs[0]?.key ?? null;
   const messages = fileKind === "json" && jsonContent !== null ? extractMessagesFromJson(jsonContent) : [];
+  const effectiveHighlight = localSearch.trim() || globalSearchQuery.trim();
 
   if (!fileKind) {
     return <EmptyState title="Select a file to start previewing." />;
@@ -60,21 +78,39 @@ export function PreviewPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="mb-4 flex flex-wrap gap-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key)}
-            className={`inline-flex h-9 items-center rounded-full border px-4 text-sm transition ${
-              resolvedTab === tab.key
-                ? "border-[#6ae4ff]/30 bg-[#6ae4ff]/14 text-white"
-                : "border-white/10 bg-white/4 text-[#8d9ab5] hover:bg-white/7 hover:text-white"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={`inline-flex h-9 items-center rounded-full border px-4 text-sm transition ${
+                resolvedTab === tab.key
+                  ? "border-[#6ae4ff]/30 bg-[#6ae4ff]/14 text-white"
+                  : "border-white/10 bg-white/4 text-[#8d9ab5] hover:bg-white/7 hover:text-white"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {(resolvedTab === "text" || resolvedTab === "fallback" || resolvedTab === "raw") && (
+          <div className="relative w-full max-w-sm">
+            <Search
+              size={14}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8d9ab5]"
+            />
+            <input
+              ref={localSearchInputRef}
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              placeholder="Search within file (Ctrl/Cmd + K)"
+              className="h-10 w-full rounded-2xl border border-white/10 bg-[#0b1020]/70 pl-9 pr-4 text-sm text-white outline-none transition placeholder:text-[#8d9ab5] focus:border-[#6ae4ff]/35 focus:ring-4 focus:ring-[#6ae4ff]/10"
+            />
+          </div>
+        )}
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto scrollbar-thin-dark">
@@ -82,28 +118,34 @@ export function PreviewPanel({
           <BinaryPreview kind={fileKind} blobUrl={blobUrl} entryName={entryName} />
         ) : null}
 
-        {resolvedTab === "text" || resolvedTab === "fallback" ? (
-          <pre className="arc-code overflow-auto rounded-3xl p-5 text-sm leading-7 text-[#e8ecf5]">
-            <code>{textContent}</code>
-          </pre>
-        ) : null}
-
-        {resolvedTab === "raw" && jsonContent !== null ? (
+        {(resolvedTab === "text" || resolvedTab === "fallback") && (
           <pre
             className="arc-code overflow-auto rounded-3xl p-5 text-sm leading-7 text-[#e8ecf5]"
             dangerouslySetInnerHTML={{
-              __html: `<code>${syntaxHighlightJson(JSON.stringify(jsonContent, null, 2))}</code>`,
+              __html: `<code>${highlightPlainText(textContent, effectiveHighlight)}</code>`,
             }}
           />
-        ) : null}
+        )}
 
-        {resolvedTab === "tree" && jsonContent !== null ? (
+        {resolvedTab === "raw" && jsonContent !== null && (
+          <pre
+            className="arc-code overflow-auto rounded-3xl p-5 text-sm leading-7 text-[#e8ecf5]"
+            dangerouslySetInnerHTML={{
+              __html: `<code>${highlightHtmlPreservingTags(
+                syntaxHighlightJson(JSON.stringify(jsonContent, null, 2)),
+                effectiveHighlight
+              )}</code>`,
+            }}
+          />
+        )}
+
+        {resolvedTab === "tree" && jsonContent !== null && (
           <div className="rounded-3xl border border-white/8 bg-white/[0.02] p-4">
-            <JsonTreeNode value={jsonContent} nodeKey="root" depth={0} />
+            <JsonTreeNode value={jsonContent} nodeKey="root" depth={0} highlight={effectiveHighlight} />
           </div>
-        ) : null}
+        )}
 
-        {resolvedTab === "messages" && messages.length > 0 ? (
+        {resolvedTab === "messages" && messages.length > 0 && (
           <div className="grid gap-4">
             <div className="rounded-3xl border border-white/8 bg-white/[0.03] p-4">
               <div className="flex items-center gap-3 text-white">
@@ -141,7 +183,6 @@ export function PreviewPanel({
 
                         {message.type ? (
                           <span className="inline-flex items-center gap-1">
-                            <Paperclip size={12} />
                             {message.type}
                           </span>
                         ) : null}
@@ -157,9 +198,12 @@ export function PreviewPanel({
                   ) : null}
                 </div>
 
-                <div className="whitespace-pre-wrap text-sm leading-7 text-[#e8ecf5]">
-                  {message.content || "(empty message)"}
-                </div>
+                <div
+                  className="whitespace-pre-wrap text-sm leading-7 text-[#e8ecf5]"
+                  dangerouslySetInnerHTML={{
+                    __html: highlightPlainText(message.content || "(empty message)", effectiveHighlight),
+                  }}
+                />
 
                 {message.extra && Object.keys(message.extra).length > 0 ? (
                   <details className="mt-4 rounded-2xl border border-white/8 bg-black/15 p-3">
@@ -169,8 +213,9 @@ export function PreviewPanel({
                     <pre
                       className="mt-3 overflow-auto text-xs leading-6 text-[#e8ecf5]"
                       dangerouslySetInnerHTML={{
-                        __html: `<code>${syntaxHighlightJson(
-                          JSON.stringify(message.extra, null, 2)
+                        __html: `<code>${highlightHtmlPreservingTags(
+                          syntaxHighlightJson(JSON.stringify(message.extra, null, 2)),
+                          effectiveHighlight
                         )}</code>`,
                       }}
                     />
@@ -179,7 +224,7 @@ export function PreviewPanel({
               </article>
             ))}
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   );
@@ -198,7 +243,6 @@ function BinaryPreview({
     return (
       <div className="grid gap-4">
         <div className="overflow-hidden rounded-3xl border border-white/8 bg-black/20 p-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={blobUrl}
             alt={entryName}
@@ -243,10 +287,12 @@ function JsonTreeNode({
   value,
   nodeKey,
   depth,
+  highlight,
 }: {
   value: unknown;
   nodeKey: string;
   depth: number;
+  highlight: string;
 }) {
   const type = getJsonType(value);
 
@@ -257,7 +303,10 @@ function JsonTreeNode({
     return (
       <details open={depth < 2} className="ml-0 my-1 border-l border-white/8 pl-3">
         <summary className="cursor-pointer py-1 text-sm">
-          <span className="font-mono text-[#6ae4ff]">{nodeKey}</span>
+          <span
+            className="font-mono text-[#6ae4ff]"
+            dangerouslySetInnerHTML={{ __html: highlightPlainText(nodeKey, highlight) }}
+          />
           <span className="mx-2 text-[#8d9ab5]">:</span>
           <span className="font-mono text-[#8d9ab5]">
             {type} ({count})
@@ -272,10 +321,17 @@ function JsonTreeNode({
                   value={item}
                   nodeKey={`[${index}]`}
                   depth={depth + 1}
+                  highlight={highlight}
                 />
               ))
             : (entries as [string, unknown][]).map(([key, val]) => (
-                <JsonTreeNode key={`${nodeKey}-${key}`} value={val} nodeKey={key} depth={depth + 1} />
+                <JsonTreeNode
+                  key={`${nodeKey}-${key}`}
+                  value={val}
+                  nodeKey={key}
+                  depth={depth + 1}
+                  highlight={highlight}
+                />
               ))}
         </div>
       </details>
@@ -284,7 +340,10 @@ function JsonTreeNode({
 
   return (
     <div className="border-l border-white/6 py-1 pl-3 text-sm font-mono">
-      <span className="text-[#6ae4ff]">{nodeKey}</span>
+      <span
+        className="text-[#6ae4ff]"
+        dangerouslySetInnerHTML={{ __html: highlightPlainText(nodeKey, highlight) }}
+      />
       <span className="mx-2 text-[#8d9ab5]">:</span>
       <span
         className={
@@ -297,9 +356,43 @@ function JsonTreeNode({
             : "text-[#ff9b9b]"
         }
         dangerouslySetInnerHTML={{
-          __html: type === "string" ? `"${escapeHtml(String(value))}"` : escapeHtml(String(value)),
+          __html:
+            type === "string"
+              ? highlightPlainText(`"${String(value)}"`, highlight)
+              : highlightPlainText(String(value), highlight),
         }}
       />
     </div>
   );
+}
+
+function highlightPlainText(text: string, query: string) {
+  const safe = escapeHtml(text);
+  if (!query.trim()) return safe;
+
+  const escapedQuery = escapeRegExp(query);
+  const regex = new RegExp(`(${escapedQuery})`, "gi");
+
+  return safe.replace(
+    regex,
+    '<mark class="rounded bg-[#6ae4ff]/25 px-1 text-white">$1</mark>'
+  );
+}
+
+function highlightHtmlPreservingTags(html: string, query: string) {
+  if (!query.trim()) return html;
+
+  const escapedQuery = escapeRegExp(query);
+  const regex = new RegExp(`(${escapedQuery})`, "gi");
+
+  return html.replace(/(>[^<]+<)/g, (segment) => {
+    return segment.replace(
+      regex,
+      '<mark class="rounded bg-[#6ae4ff]/25 px-1 text-white">$1</mark>'
+    );
+  });
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
