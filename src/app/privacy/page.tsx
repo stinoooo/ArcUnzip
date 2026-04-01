@@ -16,85 +16,68 @@ export default function PrivacyPage() {
             <section>
               <h2 className="text-lg font-semibold text-white">Overview</h2>
               <p className="mt-2">
-                ArcUnzip is designed to help users inspect ZIP archives directly in
-                the browser. We do not sell personal data, we do not profile users,
-                and we do not intentionally collect uploaded archive contents for
-                storage or resale.
+                ArcUnzip helps users inspect ZIP archives directly in the browser.
+                We do not sell personal data, we do not profile users, and we do not
+                intentionally store uploaded archive contents as part of the normal product experience.
               </p>
             </section>
 
             <section>
               <h2 className="text-lg font-semibold text-white">What We Store</h2>
               <p className="mt-2">
-                We do not store the contents of the files you open in ArcUnzip as part
-                of the normal viewing experience. Uploaded ZIP data is processed for
-                the purpose of displaying and searching the archive in your browser session.
+                We do not store the contents of the files you open in ArcUnzip during normal usage.
+                Uploaded ZIP data is processed only to enable browsing, previewing, and searching within your active session.
               </p>
               <p className="mt-2">
-                In plain terms: we do not keep a database of your uploaded archives,
-                extracted files, messages, text, images, or document contents.
+                In plain terms: we do not keep a database of your uploaded archives, extracted files,
+                messages, text, images, or document contents.
               </p>
             </section>
 
             <section>
               <h2 className="text-lg font-semibold text-white">Uploaded Files</h2>
               <p className="mt-2">
-                Files you choose to open are used only to provide the functionality of
-                the app, such as browsing, previewing, and searching content. We do not
-                claim ownership over any uploaded files or their contents.
+                Files you choose to open are used only to provide the app’s functionality.
+                We do not claim ownership over your files or their contents.
               </p>
             </section>
 
             <section>
               <h2 className="text-lg font-semibold text-white">Analytics and Logs</h2>
               <p className="mt-2">
-                Basic platform-level logs may exist through hosting providers for
-                reliability, security, and abuse prevention. These logs are not used to
-                build a stored archive of your file contents.
+                Basic hosting-level logs may exist for reliability, security, and abuse prevention.
+                These logs are not used to build a retained archive of your uploaded file contents.
               </p>
             </section>
 
             <section>
               <h2 className="text-lg font-semibold text-white">Third-Party Services</h2>
               <p className="mt-2">
-                ArcUnzip may rely on hosting and infrastructure providers to deliver the
-                site. Those providers may process technical request data such as IP
-                address, browser details, and connection metadata as part of operating
-                the service.
+                ArcUnzip may rely on infrastructure providers to deliver the site. Those providers may process
+                technical request data such as IP address, browser details, and connection metadata.
               </p>
             </section>
 
             <section>
               <h2 className="text-lg font-semibold text-white">Data Security</h2>
               <p className="mt-2">
-                We aim to minimize data handling wherever possible. That means keeping
-                processing lightweight, avoiding unnecessary retention, and not storing
-                user archive contents as part of the normal product experience.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-white">Children’s Privacy</h2>
-              <p className="mt-2">
-                ArcUnzip is not specifically directed at children. If you believe that
-                sensitive personal data has been submitted in error, please stop using the
-                service and remove the data from your local session.
+                We aim to minimize data handling wherever possible by avoiding unnecessary retention and by not
+                storing archive contents as part of the normal browsing experience.
               </p>
             </section>
 
             <section>
               <h2 className="text-lg font-semibold text-white">Changes</h2>
               <p className="mt-2">
-                This policy may be updated from time to time to reflect changes in the
-                service. Any updated version will be published on this page.
+                This policy may be updated from time to time to reflect changes in the service.
+                Any updated version will be published on this page.
               </p>
             </section>
 
             <section>
               <h2 className="text-lg font-semibold text-white">Contact</h2>
               <p className="mt-2">
-                For questions about privacy or the ArcNode ecosystem, please refer to
-                the arcnode.dev network.
+                For questions about privacy or the wider ArcNode ecosystem, please refer to arcnode.dev.
               </p>
             </section>
           </div>
