@@ -41,9 +41,14 @@ export function PreviewPanel({
   const contentAreaRef = useRef<HTMLDivElement>(null);
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
 
-  useEffect(() => {
+  // Jump back to the first match whenever the search or the open file changes.
+  // Resetting during render avoids the extra render pass of a setState-in-effect.
+  const matchResetKey = [localSearch, globalSearchQuery, activeTab, entryName].join("\u0000");
+  const [prevMatchResetKey, setPrevMatchResetKey] = useState(matchResetKey);
+  if (prevMatchResetKey !== matchResetKey) {
+    setPrevMatchResetKey(matchResetKey);
     setActiveMatchIndex(0);
-  }, [localSearch, globalSearchQuery, activeTab, entryName]);
+  }
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
